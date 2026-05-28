@@ -27,6 +27,18 @@
       border: none; display: none;
     }
     #frames iframe.active { display: block; }
+
+    #carousel {
+      display: flex; align-items: center; justify-content: center; gap: 12px;
+      padding: 6px 12px; background: #eaeaea; border-bottom: 1px solid #ddd;
+      flex-shrink: 0;
+    }
+    #carousel button {
+      border: none; background: #0078d4; color: #fff;
+      width: 28px; height: 28px; border-radius: 50%;
+      font-size: 1.1rem; cursor: pointer; line-height: 1;
+    }
+    #pdf-name { font-size: 0.85rem; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -36,36 +48,70 @@
     <button data-target="f-image">③ img変換</button>
     <button data-target="f-viewer">④ PDF.js規定ビューワー</button>
   </div>
+  <div id="carousel">
+    <button id="btn-prev">&#8249;</button>
+    <span id="pdf-name"></span>
+    <button id="btn-next">&#8250;</button>
+  </div>
   <div id="frames">
-    <iframe id="f-iframe"  src="iframe.html"  class="active"></iframe>
-    <iframe id="f-pdfjs"   src=""             data-src="pdfjs.html"></iframe>
-    <iframe id="f-image"   src=""             data-src="image.html"></iframe>
-    <iframe id="f-viewer"  src=""             data-src="viewer.html"></iframe>
+    <iframe id="f-iframe"  src="" class="active"></iframe>
+    <iframe id="f-pdfjs"   src=""></iframe>
+    <iframe id="f-image"   src=""></iframe>
+    <iframe id="f-viewer"  src=""></iframe>
   </div>
 
   <script>
     const tabs   = document.querySelectorAll('#tabs button');
     const frames = document.querySelectorAll('#frames iframe');
+    const BASES  = ['iframe.html', 'pdfjs.html', 'image.html', 'viewer.html'];
+    const PDFS   = ['ボトックスビスタ同意説明書 (1)', '【同意書サンプル】脱毛'];
+    let pdfIndex = 0;
+
+    const pdfNameEl = document.getElementById('pdf-name');
+
+    function pdfSrc(base) {
+      return base + '?pdf=' + pdfIndex;
+    }
+
+    function updatePdf() {
+      pdfNameEl.textContent = PDFS[pdfIndex];
+      frames.forEach((f, i) => {
+        if (f.classList.contains('active')) {
+          f.src = pdfSrc(BASES[i]);
+        } else {
+          f.src = ''; // 非アクティブはリセット（次回タブ切替時に再読込）
+        }
+      });
+    }
+
+    document.getElementById('btn-prev').addEventListener('click', () => {
+      pdfIndex = (pdfIndex - 1 + PDFS.length) % PDFS.length;
+      updatePdf();
+    });
+    document.getElementById('btn-next').addEventListener('click', () => {
+      pdfIndex = (pdfIndex + 1) % PDFS.length;
+      updatePdf();
+    });
 
     tabs.forEach(tab => {
       tab.addEventListener('click', () => {
         const targetId = tab.dataset.target;
-
         tabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
-
-        frames.forEach(f => {
+        frames.forEach((f, i) => {
           f.classList.remove('active');
           if (f.id === targetId) {
-            // 初回タブ切り替え時にだけ src をセット（遅延読み込み）
             if (!f.src || f.src === window.location.href) {
-              f.src = f.dataset.src;
+              f.src = pdfSrc(BASES[i]);
             }
             f.classList.add('active');
           }
         });
       });
     });
+
+    // 初期化
+    updatePdf();
   </script>
 </body>
 </html>
