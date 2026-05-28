@@ -51,6 +51,8 @@
     <button data-target="f-pdfjs">② PDF.js Canvas</button>
     <button data-target="f-image">③ img変換</button>
     <button data-target="f-viewer">④ PDF.js規定ビューワー</button>
+    <button data-target="f-blob">⑤ base64→Blob URL</button>
+    <button data-target="f-dataurl">⑥ base64→data URL</button>
   </div>
   <div id="carousel">
     <span id="pdf-name"></span>
@@ -62,12 +64,14 @@
     <iframe id="f-pdfjs"   src=""></iframe>
     <iframe id="f-image"   src=""></iframe>
     <iframe id="f-viewer"  src=""></iframe>
+    <iframe id="f-blob"    src=""></iframe>
+    <iframe id="f-dataurl" src=""></iframe>
   </div>
 
   <script>
     const tabs   = document.querySelectorAll('#tabs button');
     const frames = document.querySelectorAll('#frames iframe');
-    const BASES  = ['iframe.html', 'pdfjs.html', 'image.html', 'viewer.html'];
+    const BASES  = ['iframe.html', 'pdfjs.html', 'image.html', 'viewer.html', 'blob.html', 'dataurl.html'];
     const PDFS   = ['ボトックスビスタ同意説明書 (1)', '【同意書サンプル】脱毛'];
     let pdfIndex = 0;
 
