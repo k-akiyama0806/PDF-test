@@ -3,31 +3,32 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>⑤ base64 → Blob URL で表示</title>
+  <title>⑤ Blob URL で表示</title>
   <style>
-    body { font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100dvh; }
+    body { font-family: sans-serif; margin: 0; background: #555; }
     #log {
       padding: 8px 12px; background: #1e1e1e; color: #d4d4d4;
       font-size: 0.78rem; font-family: monospace; line-height: 1.6;
-      flex-shrink: 0; max-height: 110px; overflow-y: auto;
+      max-height: 110px; overflow-y: auto;
     }
     #log .ok   { color: #4ec9b0; }
     #log .err  { color: #f48771; }
     #log .info { color: #9cdcfe; }
-    iframe { flex: 1; width: 100%; border: none; }
+    #container { display: flex; flex-direction: column; align-items: center; padding: 16px; }
+    #container img { max-width: 100%; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
   </style>
 </head>
 <body>
   <div id="log"></div>
-  <iframe id="pdf-frame" title="PDF表示"></iframe>
+  <div id="container"></div>
 
   <script>
     const PDFS = ['ボトックスビスタ同意説明書 (1).pdf', '【同意書サンプル】脱毛.doc - Google ドキュメント.pdf'];
     const pdfIdx = parseInt(new URLSearchParams(location.search).get('pdf') || '0');
     const PDF_PATH = 'PDF/' + encodeURIComponent(PDFS[pdfIdx]);
 
-    const logEl  = document.getElementById('log');
-    const frame  = document.getElementById('pdf-frame');
+    const logEl     = document.getElementById('log');
+    const container = document.getElementById('container');
 
     function log(msg, cls = 'info') {
       const line = document.createElement('div');
@@ -55,54 +56,29 @@
      *   data URL のほうが安定する場合がある（⑥ data URL タブを参照）。
      */
 
-    async function loadPdfAsBase64(path) {
-      // ── STEP 1: PDF を fetch して ArrayBuffer → base64 に変換 ──
-      log('[Step 1] PDF を fetch 中... ' + path);
-      const res = await fetch(path);
-      if (!res.ok) throw new Error(`fetch 失敗: ${res.status}`);
-      const buffer = await res.arrayBuffer();
-      log(`[Step 1] 取得完了 (${buffer.byteLength.toLocaleString()} bytes)`, 'ok');
-
-      // Uint8Array → binary string → btoa
-      const uint8 = new Uint8Array(buffer);
-      let binary = '';
-      // 64KB ずつ処理して call stack 超過を防ぐ
-      const CHUNK = 65536;
-      for (let i = 0; i < uint8.length; i += CHUNK) {
-        binary += String.fromCharCode(...uint8.subarray(i, i + CHUNK));
-      }
-      const base64 = btoa(binary);
-      log(`[Step 1] base64 変換完了 (${base64.length.toLocaleString()} chars)`, 'ok');
-      return base64;
-    }
-
-    function base64ToBlob(base64, mimeType = 'application/pdf') {
-      // ── STEP 2: base64 をデコード → バイト列 ──
-      log('[Step 2] base64 デコード中...');
-      const binaryStr = atob(base64);
-      const bytes = new Uint8Array(binaryStr.length);
-      for (let i = 0; i < binaryStr.length; i++) {
-        bytes[i] = binaryStr.charCodeAt(i);
-      }
-      log(`[Step 2] デコード完了 (${bytes.length.toLocaleString()} bytes)`, 'ok');
-
-      // ── STEP 3: Blob 生成 → Object URL 取得 ──
-      const blob = new Blob([bytes], { type: mimeType });
-      const url  = URL.createObjectURL(blob);
-      log('[Step 3] Blob 生成・Object URL 取得完了', 'ok');
-      log('[Step 3] URL: ' + url);
-      return url;
-    }
-
     (async () => {
       try {
-        const base64 = await loadPdfAsBase64(PDF_PATH);
-        const url    = base64ToBlob(base64);
+        // ── STEP 1: PDF を fetch して Blob を取得 ──
+        log('[Step 1] PDF を fetch 中... ' + PDF_PATH);
+        const res = await fetch(PDF_PATH);
+        if (!res.ok) throw new Error(`fetch 失敗: ${res.status}`);
+        const blob = await res.blob();
+        log(`[Step 1] Blob 取得完了 (${blob.size.toLocaleString()} bytes, type: ${blob.type})`, 'ok');
 
-        frame.src = url;
+        // ── STEP 2: Blob → Object URL 取得 ──
+        const url = URL.createObjectURL(blob);
+        log('[Step 2] Object URL 取得完了', 'ok');
+        log('[Step 2] URL: ' + url);
 
-        // iframe ロード完了後に Object URL を解放してメモリを戻す
-        frame.addEventListener('load', () => {
+        // ── STEP 3: img.src にセット ──
+        const img = document.createElement('img');
+        img.src = url;
+        img.alt = 'PDF';
+        container.appendChild(img);
+        log('[Step 3] img.src に Object URL をセット', 'ok');
+
+        // img ロード完了後に Object URL を解放してメモリを戻す
+        img.addEventListener('load', () => {
           URL.revokeObjectURL(url);
           log('[Cleanup] URL.revokeObjectURL 実行 → Blob メモリ解放', 'ok');
         }, { once: true });

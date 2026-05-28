@@ -5,29 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>⑥ base64 → data URL で表示</title>
   <style>
-    body { font-family: sans-serif; margin: 0; display: flex; flex-direction: column; height: 100dvh; }
+    body { font-family: sans-serif; margin: 0; background: #555; }
     #log {
       padding: 8px 12px; background: #1e1e1e; color: #d4d4d4;
       font-size: 0.78rem; font-family: monospace; line-height: 1.6;
-      flex-shrink: 0; max-height: 110px; overflow-y: auto;
+      max-height: 110px; overflow-y: auto;
     }
     #log .ok   { color: #4ec9b0; }
     #log .err  { color: #f48771; }
     #log .info { color: #9cdcfe; }
-    iframe { flex: 1; width: 100%; border: none; }
+    #container { display: flex; flex-direction: column; align-items: center; padding: 16px; }
+    #container img { max-width: 100%; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
   </style>
 </head>
 <body>
   <div id="log"></div>
-  <iframe id="pdf-frame" title="PDF表示"></iframe>
+  <div id="container"></div>
 
   <script>
     const PDFS = ['ボトックスビスタ同意説明書 (1).pdf', '【同意書サンプル】脱毛.doc - Google ドキュメント.pdf'];
     const pdfIdx = parseInt(new URLSearchParams(location.search).get('pdf') || '0');
     const PDF_PATH = 'PDF/' + encodeURIComponent(PDFS[pdfIdx]);
 
-    const logEl = document.getElementById('log');
-    const frame = document.getElementById('pdf-frame');
+    const logEl     = document.getElementById('log');
+    const container = document.getElementById('container');
 
     function log(msg, cls = 'info') {
       const line = document.createElement('div');
@@ -39,23 +40,14 @@
 
     (async () => {
       try {
-        // ── STEP 1: PDF を fetch して ArrayBuffer → base64 に変換 ──
+        // ── STEP 1: PDF を fetch して Blob を取得 ──
         log('[Step 1] PDF を fetch 中... ' + PDF_PATH);
         const res = await fetch(PDF_PATH);
         if (!res.ok) throw new Error(`fetch 失敗: ${res.status}`);
-        const buffer = await res.arrayBuffer();
-        log(`[Step 1] 取得完了 (${buffer.byteLength.toLocaleString()} bytes)`, 'ok');
+        const blob = await res.blob();
+        log(`[Step 1] Blob 取得完了 (${blob.size.toLocaleString()} bytes, type: ${blob.type})`, 'ok');
 
-        const uint8 = new Uint8Array(buffer);
-        let binary = '';
-        const CHUNK = 65536;
-        for (let i = 0; i < uint8.length; i += CHUNK) {
-          binary += String.fromCharCode(...uint8.subarray(i, i + CHUNK));
-        }
-        const base64 = btoa(binary);
-        log(`[Step 1] base64 変換完了 (${base64.length.toLocaleString()} chars)`, 'ok');
-
-        // ── STEP 2: data URL を組み立てて iframe に直接セット ──
+        // ── STEP 2: Blob → data URL (FileReader.readAsDataURL) ──
         //
         // ✅ data URL が Blob URL より安定する場合（モバイルSafari）
         //   Blob URL は URL.createObjectURL() がブラウザ側でURLレジストリを管理するため、
@@ -66,12 +58,22 @@
         //   data URL は「文字列をそのまま src に渡す」だけで
         //   ブラウザ側のURLレジストリを使わないため、このバグを踏まない。
         //   ただし base64文字列自体のメモリ解放はGC任せになる点に注意。
-        const dataUrl = 'data:application/pdf;base64,' + base64;
-        log('[Step 2] data URL 生成完了', 'ok');
-        log('[Step 2] data URL (先頭50文字): ' + dataUrl.slice(0, 50) + '...');
+        log('[Step 2] FileReader で data URL に変換中...');
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload  = () => resolve(reader.result);
+          reader.onerror = () => reject(reader.error);
+          reader.readAsDataURL(blob);
+        });
+        log(`[Step 2] data URL 変換完了 (${dataUrl.length.toLocaleString()} chars)`, 'ok');
+        log('[Step 2] data URL (先頭60文字): ' + dataUrl.slice(0, 60) + '...');
 
-        frame.src = dataUrl;
-        log('[Step 2] iframe に data URL をセット', 'ok');
+        // ── STEP 3: img.src にセット ──
+        const img = document.createElement('img');
+        img.src = dataUrl;
+        img.alt = 'PDF';
+        container.appendChild(img);
+        log('[Step 3] img.src に data URL をセット', 'ok');
 
       } catch (err) {
         log('[Error] ' + err.message, 'err');
