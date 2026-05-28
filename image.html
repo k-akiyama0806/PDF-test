@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>③ PDF.js → img で表示</title>
+  <style>
+    body { font-family: sans-serif; margin: 0; background: #555; }
+    #status { padding: 16px; color: #fff; text-align: center; }
+    #pages { display: flex; flex-direction: column; align-items: center; gap: 8px; padding: 16px; }
+    img { max-width: 100%; box-shadow: 0 2px 8px rgba(0,0,0,0.4); }
+  </style>
+</head>
+<body>
+
+  <div id="status">読み込み中...</div>
+  <div id="pages"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script>
+    const PDF_PATH = 'PDF/' + encodeURIComponent('【同意書サンプル】脱毛.doc - Google ドキュメント.pdf');
+
+    pdfjsLib.GlobalWorkerOptions.workerSrc =
+      'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+    const status = document.getElementById('status');
+    const pages  = document.getElementById('pages');
+    const SCALE  = window.devicePixelRatio >= 2 ? 1.5 : 2;
+
+    pdfjsLib.getDocument(PDF_PATH).promise.then(async (pdf) => {
+      status.textContent = `全 ${pdf.numPages} ページ`;
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page     = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: SCALE });
+
+        // 一時canvasにレンダリング
+        const canvas  = document.createElement('canvas');
+        canvas.width  = viewport.width;
+        canvas.height = viewport.height;
+
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+
+        // canvasをPNG data URLに変換してimgで表示
+        const img = document.createElement('img');
+        img.src = canvas.toDataURL('image/png');
+        img.alt = `ページ ${i}`;
+        img.style.width  = (viewport.width / SCALE) + 'px';
+        pages.appendChild(img);
+      }
+    }).catch((err) => {
+      status.textContent = 'エラー: ' + err.message;
+    });
+  </script>
+</body>
+</html>
