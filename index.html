@@ -29,16 +29,20 @@
     #frames iframe.active { display: block; }
 
     #carousel {
-      display: flex; align-items: center; justify-content: center; gap: 12px;
-      padding: 6px 12px; background: #eaeaea; border-bottom: 1px solid #ddd;
+      display: flex; align-items: center; justify-content: center;
+      padding: 4px 12px; background: #eaeaea; border-bottom: 1px solid #ddd;
       flex-shrink: 0;
     }
-    #carousel button {
-      border: none; background: #0078d4; color: #fff;
-      width: 28px; height: 28px; border-radius: 50%;
-      font-size: 1.1rem; cursor: pointer; line-height: 1;
-    }
     #pdf-name { font-size: 0.85rem; max-width: 220px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .nav-btn {
+      position: absolute; top: 50%; transform: translateY(-50%);
+      z-index: 10; border: none; background: rgba(0,0,0,0.35); color: #fff;
+      width: 36px; height: 36px; border-radius: 50%;
+      font-size: 1.4rem; cursor: pointer; line-height: 1;
+    }
+    #btn-prev { left: 6px; }
+    #btn-next { right: 6px; }
   </style>
 </head>
 <body>
@@ -49,11 +53,11 @@
     <button data-target="f-viewer">④ PDF.js規定ビューワー</button>
   </div>
   <div id="carousel">
-    <button id="btn-prev">&#8249;</button>
     <span id="pdf-name"></span>
-    <button id="btn-next">&#8250;</button>
   </div>
   <div id="frames">
+    <button id="btn-prev" class="nav-btn">&#8249;</button>
+    <button id="btn-next" class="nav-btn">&#8250;</button>
     <iframe id="f-iframe"  src="" class="active"></iframe>
     <iframe id="f-pdfjs"   src=""></iframe>
     <iframe id="f-image"   src=""></iframe>
